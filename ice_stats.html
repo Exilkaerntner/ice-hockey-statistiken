@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>win2day ICE Hockey League — Spieltag Statistiken</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,600;0,800;1,300&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ice: #a8d8ea;
+    --ice-bright: #d6f0fa;
+    --navy: #0a0e1a;
+    --navy-mid: #111829;
+    --navy-card: #161e30;
+    --accent: #00c6ff;
+    --accent2: #ff4d6d;
+    --gold: #f4c430;
+    --text: #e8eef5;
+    --text-dim: #7a8fa8;
+    --ok: #22c55e;
+    --line: rgba(168,216,234,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--navy);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ─────────────────────────────────────── */
+  header {
+    position: relative;
+    padding: 56px 40px 48px;
+    background: linear-gradient(135deg, #0c1220 0%, #0f1f3a 60%, #0a0e1a 100%);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 80% at 80% 50%, rgba(0,198,255,.07) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 10% 80%, rgba(255,77,109,.05) 0%, transparent 70%);
+  }
+
+  /* decorative rink lines */
+  header::after {
+    content: '';
+    position: absolute;
+    right: -60px; top: -60px;
+    width: 420px; height: 420px;
+    border-radius: 50%;
+    border: 1px solid rgba(168,216,234,.08);
+    box-shadow:
+      0 0 0 40px rgba(168,216,234,.04),
+      0 0 0 80px rgba(168,216,234,.02);
+    pointer-events: none;
+  }
+
+  .header-inner { position: relative; max-width: 1200px; margin: 0 auto; }
+
+  .league-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,198,255,.1);
+    border: 1px solid rgba(0,198,255,.25);
+    border-radius: 4px;
+    padding: 5px 14px 5px 10px;
+    margin-bottom: 18px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+  }
+
+  .puck-icon { font-size: 16px; }
+
+  h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+  }
+
+  h1 span.dim { color: var(--text-dim); font-weight: 300; font-style: italic; }
+  h1 span.accent { color: var(--accent); }
+
+  .header-meta {
+    margin-top: 16px;
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .meta-pill {
+    font-size: 13px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .meta-pill strong {
+    color: var(--gold);
+    margin-right: 4px;
+  }
+
+  .sep { width: 1px; height: 16px; background: var(--line); }
+
+  /* ── MAIN ────────────────────────────────────────── */
+  main { max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* ── SECTION HEADER ───────────────────────────────── */
+  .section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  /* ── MATCHUP CARD ──────────────────────────────────── */
+  .matchup-card {
+    background: var(--navy-card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 32px;
+    opacity: 0;
+    transform: translateY(18px);
+    animation: fadeUp .5s ease forwards;
+  }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .matchup-card:nth-child(1) { animation-delay: .05s; }
+  .matchup-card:nth-child(2) { animation-delay: .12s; }
+  .matchup-card:nth-child(3) { animation-delay: .19s; }
+  .matchup-card:nth-child(4) { animation-delay: .26s; }
+  .matchup-card:nth-child(5) { animation-delay: .33s; }
+  .matchup-card:nth-child(6) { animation-delay: .40s; }
+
+  .matchup-header {
+    padding: 18px 24px 16px;
+    background: linear-gradient(90deg, rgba(0,198,255,.06) 0%, transparent 70%);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .match-time {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    min-width: 70px;
+    text-transform: uppercase;
+  }
+
+  .teams {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .team-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(18px, 3vw, 26px);
+    font-weight: 800;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .team-name .short {
+    display: inline-block;
+    background: rgba(255,255,255,.06);
+    border-radius: 3px;
+    padding: 2px 7px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .vs-badge {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 300;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--text-dim);
+    padding: 0 4px;
+  }
+
+  .warning-badge {
+    margin-left: auto;
+    font-size: 11px;
+    letter-spacing: 1px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: rgba(244,196,48,.1);
+    border: 1px solid rgba(244,196,48,.25);
+    color: var(--gold);
+    border-radius: 4px;
+    padding: 4px 10px;
+  }
+
+  /* ── STATS TABS ────────────────────────────────────── */
+  .tab-nav {
+    display: flex;
+    border-bottom: 1px solid var(--line);
+    padding: 0 24px;
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 14px 16px 12px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color .2s, border-color .2s;
+  }
+
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; padding: 20px 24px 22px; }
+  .tab-content.active { display: block; }
+
+  /* ── STATS TABLE ─────────────────────────────────── */
+  .stat-block {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: 100px repeat(6, 1fr) 64px 48px;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .stat-row.header-row {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+  }
+
+  .stat-row.header-row > *:first-child { color: var(--text-dim); }
+
+  .stat-cell {
+    padding: 6px 8px;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .stat-cell:first-child {
+    text-align: left;
+    font-size: 12px;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: none;
+    padding-left: 0;
+  }
+
+  .row-abs .stat-cell { background: rgba(255,255,255,.03); }
+
+  .cell-total { color: var(--text); }
+  .cell-w-reg { color: #22c55e; }
+  .cell-w-ot  { color: #86efac; }
+  .cell-tie   { color: var(--text-dim); }
+  .cell-l-ot  { color: #fca5a5; }
+  .cell-l-reg { color: var(--accent2); }
+  .cell-test  { color: var(--text-dim); font-size: 13px; }
+  .cell-check { font-size: 14px; }
+
+  .row-pct .stat-cell { font-size: 13px; color: var(--text-dim); }
+  .row-pct .cell-total { color: var(--text-dim); }
+  .row-pct .cell-w-reg { color: rgba(34,197,94,.7); }
+  .row-pct .cell-w-ot  { color: rgba(134,239,172,.7); }
+  .row-pct .cell-l-ot  { color: rgba(252,165,165,.7); }
+  .row-pct .cell-l-reg { color: rgba(255,77,109,.7); }
+
+  /* heatmap for win pct */
+  .bar-cell {
+    grid-column: span 1;
+    position: relative;
+    padding: 6px 8px;
+  }
+
+  /* ── LEGEND ──────────────────────────────────────── */
+  .legend {
+    margin-top: 32px;
+    padding: 20px 24px;
+    background: rgba(255,255,255,.02);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+
+  .legend h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  .legend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px 24px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .legend-dot {
+    width: 28px;
+    height: 24px;
+    border-radius: 4px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: .5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .footer-note {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: .5px;
+    text-align: center;
+  }
+
+  @media (max-width: 700px) {
+    .stat-row { grid-template-columns: 80px repeat(6, 1fr) 54px 36px; }
+    .stat-cell { padding: 5px 4px; font-size: 13px; }
+    .matchup-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    header { padding: 36px 20px 32px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="league-badge">
+      <span class="puck-icon">🏒</span>
+      win2day ICE Hockey League 2025/26
+    </div>
+    <h1>
+      <span class="dim">Spieltag</span><br>
+      <span class="accent">Historische</span> H2H<br>
+      <span class="dim">Statistiken</span>
+    </h1>
+    <div class="header-meta">
+      <span class="meta-pill"><strong>Datum</strong> 01. März 2026</span>
+      <div class="sep"></div>
+      <span class="meta-pill"><strong>Face-off</strong> 17:30 Uhr</span>
+      <div class="sep"></div>
+      <span class="meta-pill"><strong>Runde</strong> 48 — Letzter Grunddurchgang</span>
+      <div class="sep"></div>
+      <span class="meta-pill"><strong>Spiele</strong> 6 Partien</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="section-label">6 Partien — Head-to-Head über alle Saisonen</div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- MATCHUP 1: KAC vs VIC -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="matchup-card" id="m1">
+    <div class="matchup-header">
+      <div class="match-time">17:30</div>
+      <div class="teams">
+        <div class="team-name">EC-KAC <span class="short">KAC</span></div>
+        <div class="vs-badge">vs</div>
+        <div class="team-name">Vienna Capitals <span class="short">VIC</span></div>
+      </div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('m1','all')">Gesamt</button>
+      <button class="tab-btn" onclick="switchTab('m1','home')">Heim (KAC)</button>
+      <button class="tab-btn" onclick="switchTab('m1','away')">Auswärts (KAC)</button>
+    </div>
+
+    <div id="m1-all" class="tab-content active">
+      <!-- header -->
+      <div class="stat-row header-row">
+        <div></div>
+        <div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div>
+        <div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">166</div>
+          <div class="stat-cell cell-w-reg">78</div>
+          <div class="stat-cell cell-w-ot">17</div>
+          <div class="stat-cell cell-tie">32</div>
+          <div class="stat-cell cell-l-ot">15</div>
+          <div class="stat-cell cell-l-reg">56</div>
+          <div class="stat-cell cell-test">166</div>
+          <div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div>
+          <div class="stat-cell cell-w-reg">47.0%</div>
+          <div class="stat-cell cell-w-ot">10.2%</div>
+          <div class="stat-cell cell-tie">19.3%</div>
+          <div class="stat-cell cell-l-ot">9.0%</div>
+          <div class="stat-cell cell-l-reg">33.7%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="m1-home" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div>
+        <div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div>
+        <div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">81</div>
+          <div class="stat-cell cell-w-reg">43</div>
+          <div class="stat-cell cell-w-ot">7</div>
+          <div class="stat-cell cell-tie">14</div>
+          <div class="stat-cell cell-l-ot">7</div>
+          <div class="stat-cell cell-l-reg">24</div>
+          <div class="stat-cell cell-test">81</div>
+          <div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div>
+          <div class="stat-cell cell-w-reg">53.1%</div>
+          <div class="stat-cell cell-w-ot">8.6%</div>
+          <div class="stat-cell cell-tie">17.3%</div>
+          <div class="stat-cell cell-l-ot">8.6%</div>
+          <div class="stat-cell cell-l-reg">29.6%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="m1-away" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div>
+        <div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div>
+        <div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">85</div>
+          <div class="stat-cell cell-w-reg">35</div>
+          <div class="stat-cell cell-w-ot">10</div>
+          <div class="stat-cell cell-tie">18</div>
+          <div class="stat-cell cell-l-ot">8</div>
+          <div class="stat-cell cell-l-reg">32</div>
+          <div class="stat-cell cell-test">85</div>
+          <div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div>
+          <div class="stat-cell cell-w-reg">41.2%</div>
+          <div class="stat-cell cell-w-ot">11.8%</div>
+          <div class="stat-cell cell-tie">21.2%</div>
+          <div class="stat-cell cell-l-ot">9.4%</div>
+          <div class="stat-cell cell-l-reg">37.6%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- MATCHUP 2: RBS vs HCI -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="matchup-card" id="m2">
+    <div class="matchup-header">
+      <div class="match-time">17:30</div>
+      <div class="teams">
+        <div class="team-name">EC Red Bull Salzburg <span class="short">RBS</span></div>
+        <div class="vs-badge">vs</div>
+        <div class="team-name">HC TIWAG Innsbruck <span class="short">HCI</span></div>
+      </div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('m2','all')">Gesamt</button>
+      <button class="tab-btn" onclick="switchTab('m2','home')">Heim (RBS)</button>
+      <button class="tab-btn" onclick="switchTab('m2','away')">Auswärts (RBS)</button>
+    </div>
+
+    <div id="m2-all" class="tab-content active">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">97</div><div class="stat-cell cell-w-reg">59</div><div class="stat-cell cell-w-ot">5</div><div class="stat-cell cell-tie">15</div><div class="stat-cell cell-l-ot">10</div><div class="stat-cell cell-l-reg">23</div>
+          <div class="stat-cell cell-test">97</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">60.8%</div><div class="stat-cell cell-w-ot">5.2%</div><div class="stat-cell cell-tie">15.5%</div><div class="stat-cell cell-l-ot">10.3%</div><div class="stat-cell cell-l-reg">23.7%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+    <div id="m2-home" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">48</div><div class="stat-cell cell-w-reg">35</div><div class="stat-cell cell-w-ot">2</div><div class="stat-cell cell-tie">6</div><div class="stat-cell cell-l-ot">4</div><div class="stat-cell cell-l-reg">7</div>
+          <div class="stat-cell cell-test">48</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">72.9%</div><div class="stat-cell cell-w-ot">4.2%</div><div class="stat-cell cell-tie">12.5%</div><div class="stat-cell cell-l-ot">8.3%</div><div class="stat-cell cell-l-reg">14.6%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+    <div id="m2-away" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">49</div><div class="stat-cell cell-w-reg">24</div><div class="stat-cell cell-w-ot">3</div><div class="stat-cell cell-tie">9</div><div class="stat-cell cell-l-ot">6</div><div class="stat-cell cell-l-reg">16</div>
+          <div class="stat-cell cell-test">49</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">49.0%</div><div class="stat-cell cell-w-ot">6.1%</div><div class="stat-cell cell-tie">18.4%</div><div class="stat-cell cell-l-ot">12.2%</div><div class="stat-cell cell-l-reg">32.7%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- MATCHUP 3: VSV vs OLL -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="matchup-card" id="m3">
+    <div class="matchup-header">
+      <div class="match-time">17:30</div>
+      <div class="teams">
+        <div class="team-name">EC iDM VSV <span class="short">VSV</span></div>
+        <div class="vs-badge">vs</div>
+        <div class="team-name">HC Falkensteiner Pustertal <span class="short">OLL</span></div>
+      </div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('m3','all')">Gesamt</button>
+      <button class="tab-btn" onclick="switchTab('m3','home')">Heim (VSV)</button>
+      <button class="tab-btn" onclick="switchTab('m3','away')">Auswärts (VSV)</button>
+    </div>
+
+    <div id="m3-all" class="tab-content active">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">84</div><div class="stat-cell cell-w-reg">43</div><div class="stat-cell cell-w-ot">5</div><div class="stat-cell cell-tie">13</div><div class="stat-cell cell-l-ot">8</div><div class="stat-cell cell-l-reg">28</div>
+          <div class="stat-cell cell-test">84</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">51.2%</div><div class="stat-cell cell-w-ot">6.0%</div><div class="stat-cell cell-tie">15.5%</div><div class="stat-cell cell-l-ot">9.5%</div><div class="stat-cell cell-l-reg">33.3%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+    <div id="m3-home" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">43</div><div class="stat-cell cell-w-reg">27</div><div class="stat-cell cell-w-ot">3</div><div class="stat-cell cell-tie">5</div><div class="stat-cell cell-l-ot">2</div><div class="stat-cell cell-l-reg">11</div>
+          <div class="stat-cell cell-test">43</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">62.8%</div><div class="stat-cell cell-w-ot">7.0%</div><div class="stat-cell cell-tie">11.6%</div><div class="stat-cell cell-l-ot">4.7%</div><div class="stat-cell cell-l-reg">25.6%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+    <div id="m3-away" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">41</div><div class="stat-cell cell-w-reg">16</div><div class="stat-cell cell-w-ot">2</div><div class="stat-cell cell-tie">8</div><div class="stat-cell cell-l-ot">6</div><div class="stat-cell cell-l-reg">17</div>
+          <div class="stat-cell cell-test">41</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">39.0%</div><div class="stat-cell cell-w-ot">4.9%</div><div class="stat-cell cell-tie">19.5%</div><div class="stat-cell cell-l-ot">14.6%</div><div class="stat-cell cell-l-reg">41.5%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- MATCHUP 4: AVSF vs FTC -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="matchup-card" id="m4">
+    <div class="matchup-header">
+      <div class="match-time">17:30</div>
+      <div class="teams">
+        <div class="team-name">Hydro Fehérvár AV19 <span class="short">AVSF</span></div>
+        <div class="vs-badge">vs</div>
+        <div class="team-name">FTC-Telekom Budapest <span class="short">FTC</span></div>
+      </div>
+      <div class="warning-badge">⚠ Nur 3 Duelle — FTC neu ab 25/26</div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('m4','all')">Gesamt</button>
+      <button class="tab-btn" onclick="switchTab('m4','home')">Heim (AVSF)</button>
+      <button class="tab-btn" onclick="switchTab('m4','away')">Auswärts (AVSF)</button>
+    </div>
+
+    <div id="m4-all" class="tab-content active">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">3</div><div class="stat-cell cell-w-reg">3</div><div class="stat-cell cell-w-ot">0</div><div class="stat-cell cell-tie">0</div><div class="stat-cell cell-l-ot">0</div><div class="stat-cell cell-l-reg">0</div>
+          <div class="stat-cell cell-test">3</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">100.0%</div><div class="stat-cell cell-w-ot">0.0%</div><div class="stat-cell cell-tie">0.0%</div><div class="stat-cell cell-l-ot">0.0%</div><div class="stat-cell cell-l-reg">0.0%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+    <div id="m4-home" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">1</div><div class="stat-cell cell-w-reg">1</div><div class="stat-cell cell-w-ot">0</div><div class="stat-cell cell-tie">0</div><div class="stat-cell cell-l-ot">0</div><div class="stat-cell cell-l-reg">0</div>
+          <div class="stat-cell cell-test">1</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">100.0%</div><div class="stat-cell cell-w-ot">0.0%</div><div class="stat-cell cell-tie">0.0%</div><div class="stat-cell cell-l-ot">0.0%</div><div class="stat-cell cell-l-reg">0.0%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+    <div id="m4-away" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">2</div><div class="stat-cell cell-w-reg">2</div><div class="stat-cell cell-w-ot">0</div><div class="stat-cell cell-tie">0</div><div class="stat-cell cell-l-ot">0</div><div class="stat-cell cell-l-reg">0</div>
+          <div class="stat-cell cell-test">2</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">100.0%</div><div class="stat-cell cell-w-ot">0.0%</div><div class="stat-cell cell-tie">0.0%</div><div class="stat-cell cell-l-ot">0.0%</div><div class="stat-cell cell-l-reg">0.0%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- MATCHUP 5: EHL vs G99 -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="matchup-card" id="m5">
+    <div class="matchup-header">
+      <div class="match-time">17:30 ★</div>
+      <div class="teams">
+        <div class="team-name">Steinbach Black Wings Linz <span class="short">EHL</span></div>
+        <div class="vs-badge">vs</div>
+        <div class="team-name">Moser Medical Graz99ers <span class="short">G99</span></div>
+      </div>
+      <div class="warning-badge" style="background:rgba(0,198,255,.08);border-color:rgba(0,198,255,.2);color:var(--accent);">★ Live ORF Sport+</div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('m5','all')">Gesamt</button>
+      <button class="tab-btn" onclick="switchTab('m5','home')">Heim (EHL)</button>
+      <button class="tab-btn" onclick="switchTab('m5','away')">Auswärts (EHL)</button>
+    </div>
+
+    <div id="m5-all" class="tab-content active">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">146</div><div class="stat-cell cell-w-reg">63</div><div class="stat-cell cell-w-ot">24</div><div class="stat-cell cell-tie">35</div><div class="stat-cell cell-l-ot">11</div><div class="stat-cell cell-l-reg">48</div>
+          <div class="stat-cell cell-test">146</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">43.2%</div><div class="stat-cell cell-w-ot">16.4%</div><div class="stat-cell cell-tie">24.0%</div><div class="stat-cell cell-l-ot">7.5%</div><div class="stat-cell cell-l-reg">32.9%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+    <div id="m5-home" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">74</div><div class="stat-cell cell-w-reg">37</div><div class="stat-cell cell-w-ot">13</div><div class="stat-cell cell-tie">17</div><div class="stat-cell cell-l-ot">4</div><div class="stat-cell cell-l-reg">20</div>
+          <div class="stat-cell cell-test">74</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">50.0%</div><div class="stat-cell cell-w-ot">17.6%</div><div class="stat-cell cell-tie">23.0%</div><div class="stat-cell cell-l-ot">5.4%</div><div class="stat-cell cell-l-reg">27.0%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+    <div id="m5-away" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">72</div><div class="stat-cell cell-w-reg">26</div><div class="stat-cell cell-w-ot">11</div><div class="stat-cell cell-tie">18</div><div class="stat-cell cell-l-ot">7</div><div class="stat-cell cell-l-reg">28</div>
+          <div class="stat-cell cell-test">72</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">36.1%</div><div class="stat-cell cell-w-ot">15.3%</div><div class="stat-cell cell-tie">25.0%</div><div class="stat-cell cell-l-ot">9.7%</div><div class="stat-cell cell-l-reg">38.9%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- MATCHUP 6: PIV vs HCB -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="matchup-card" id="m6">
+    <div class="matchup-header">
+      <div class="match-time">17:30</div>
+      <div class="teams">
+        <div class="team-name">Pioneers Vorarlberg <span class="short">PIV</span></div>
+        <div class="vs-badge">vs</div>
+        <div class="team-name">HCB Südtirol Alperia <span class="short">HCB</span></div>
+      </div>
+      <div class="warning-badge">⚠ Nur 15 Duelle — PIV neu ab 20/21</div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('m6','all')">Gesamt</button>
+      <button class="tab-btn" onclick="switchTab('m6','home')">Heim (PIV)</button>
+      <button class="tab-btn" onclick="switchTab('m6','away')">Auswärts (PIV)</button>
+    </div>
+
+    <div id="m6-all" class="tab-content active">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">15</div><div class="stat-cell cell-w-reg">6</div><div class="stat-cell cell-w-ot">0</div><div class="stat-cell cell-tie">1</div><div class="stat-cell cell-l-ot">1</div><div class="stat-cell cell-l-reg">8</div>
+          <div class="stat-cell cell-test">15</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">40.0%</div><div class="stat-cell cell-w-ot">0.0%</div><div class="stat-cell cell-tie">6.7%</div><div class="stat-cell cell-l-ot">6.7%</div><div class="stat-cell cell-l-reg">53.3%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+    <div id="m6-home" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">7</div><div class="stat-cell cell-w-reg">4</div><div class="stat-cell cell-w-ot">0</div><div class="stat-cell cell-tie">1</div><div class="stat-cell cell-l-ot">1</div><div class="stat-cell cell-l-reg">2</div>
+          <div class="stat-cell cell-test">7</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">57.1%</div><div class="stat-cell cell-w-ot">0.0%</div><div class="stat-cell cell-tie">14.3%</div><div class="stat-cell cell-l-ot">14.3%</div><div class="stat-cell cell-l-reg">28.6%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+    <div id="m6-away" class="tab-content">
+      <div class="stat-row header-row">
+        <div></div><div>Spiele</div><div>W reg.</div><div>W OT</div><div>TIE</div><div>L OT</div><div>L reg.</div><div>TEST</div><div>✓</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-row row-abs">
+          <div class="stat-cell">Absolut</div>
+          <div class="stat-cell cell-total">8</div><div class="stat-cell cell-w-reg">2</div><div class="stat-cell cell-w-ot">0</div><div class="stat-cell cell-tie">0</div><div class="stat-cell cell-l-ot">0</div><div class="stat-cell cell-l-reg">6</div>
+          <div class="stat-cell cell-test">8</div><div class="stat-cell cell-check">✅</div>
+        </div>
+        <div class="stat-row row-pct">
+          <div class="stat-cell">Relativ</div>
+          <div class="stat-cell cell-total">100%</div><div class="stat-cell cell-w-reg">25.0%</div><div class="stat-cell cell-w-ot">0.0%</div><div class="stat-cell cell-tie">0.0%</div><div class="stat-cell cell-l-ot">0.0%</div><div class="stat-cell cell-l-reg">75.0%</div>
+          <div class="stat-cell"></div><div class="stat-cell"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <h3>Legende — Spalten-Erklärung</h3>
+    <div class="legend-grid">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:rgba(34,197,94,.15);color:#22c55e;">W</div>
+        <span><strong style="color:#22c55e;">W reg.</strong> — Sieg in regulärer Spielzeit (3 Pkte)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:rgba(134,239,172,.1);color:#86efac;">OT</div>
+        <span><strong style="color:#86efac;">W OT</strong> — Sieg in Overtime/Penalty (2 Pkte)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:rgba(120,130,150,.12);color:#7a8fa8;">TIE</div>
+        <span><strong style="color:#7a8fa8;">TIE</strong> — Spiel in OT/PS entschieden (gesamt)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:rgba(252,165,165,.1);color:#fca5a5;">LO</div>
+        <span><strong style="color:#fca5a5;">L OT</strong> — Niederlage in Overtime/Penalty (1 Pkt)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:rgba(255,77,109,.1);color:#ff4d6d;">L</div>
+        <span><strong style="color:#ff4d6d;">L reg.</strong> — Niederlage in regulärer Spielzeit (0 Pkte)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:rgba(168,216,234,.06);color:#7a8fa8;">✓</div>
+        <span><strong>TEST</strong> — Kontrollsumme = Spiele absolut</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Datenquelle: Historische Ergebnisse EBEL/ICE seit 1950 · Berechnet mit Python/pandas<br>
+    Statistiken beziehen sich auf <strong>Team A = jeweils das Heimteam des heutigen Spieltags</strong><br>
+    Alle 18 Kontrollsummen ✅ verifiziert
+  </div>
+</main>
+
+<script>
+  function switchTab(matchId, tab) {
+    const card = document.getElementById(matchId);
+    card.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    card.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    card.querySelector(`#${matchId}-${tab}`).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+</script>
+</body>
+</html>
