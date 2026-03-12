@@ -476,14 +476,12 @@ footer a:hover{color:var(--red-light)}
         <span class="controls-label">Paarung wählen</span>
         <select class="select-styled" id="po-matchup-select" onchange="renderPlayoff()" style="min-width:260px">
           <option value="">— Paarung auswählen —</option>
-          <option value="KAC|RBS">EC-KAC vs. EC Red Bull Salzburg</option>
-          <option value="VSV|HCB">EC VSV vs. HCB Südtirol Alperia</option>
-          <option value="EHL|G99">Steinbach Black Wings Linz vs. Moser Medical Graz99ers</option>
-          <option value="VIC|HCI">Vienna Capitals vs. HC TIWAG Innsbruck</option>
-          <option value="KAC|VSV">EC-KAC vs. EC VSV</option>
-          <option value="RBS|EHL">EC Red Bull Salzburg vs. Steinbach Black Wings Linz</option>
-          <option value="HCB|VIC">HCB Südtirol Alperia vs. Vienna Capitals</option>
-          <option value="G99|HCI">Moser Medical Graz99ers vs. HC TIWAG Innsbruck</option>
+          <optgroup label="── Viertelfinale 2025/26 ──">
+            <option value="G99|VSV">QF1: Moser Medical Graz99ers vs. EC iDM Wärmepumpen VSV</option>
+            <option value="KAC|AVSF">QF2: EC-KAC vs. Hydro Fehérvár AV19</option>
+            <option value="RBS|HCP">QF3: EC Red Bull Salzburg vs. HC Falkensteiner Pustertal</option>
+            <option value="HCB|OLL">QF4: HCB Südtirol Alperia vs. Olimpija Ljubljana</option>
+          </optgroup>
         </select>
       </div>
       <div id="playoff-output">
