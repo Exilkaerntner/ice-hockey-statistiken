@@ -652,16 +652,18 @@ function wp(pTot,p10){
   return 0.7*p10+0.3*pTot;
 }
 function seriesLengthProb(wFor,lFor,gPs,gLs){
-  if(wFor+lFor>7)return 0;
-  const n=wFor+lFor-1;
+  // P(tA wins series in exactly wFor+lFor games, last game = win for tA)
+  if(wFor+lFor>7||wFor>4||lFor>3)return 0;
+  const lastGame=wFor+lFor-1; // 0-indexed index of the deciding game
   let prob=0;
   function en(game,wA,wB,p){
-    if(wA===wFor-1&&wB===lFor){
-      const li=wFor+lFor-1;
-      if(li<gPs.length)prob+=p*gPs[li];
+    if(game===lastGame){
+      // At the deciding game: need exactly wFor-1 wins and lFor losses so far
+      if(wA===wFor-1&&wB===lFor) prob+=p*gPs[lastGame];
       return;
     }
-    if(wA>=wFor||wB>=lFor||game>=n||game>=gPs.length)return;
+    // Prune: already exceeded sub-target counts
+    if(wA>wFor-1||wB>lFor||game>=gPs.length)return;
     en(game+1,wA+1,wB,p*gPs[game]);
     en(game+1,wA,wB+1,p*gLs[game]);
   }
