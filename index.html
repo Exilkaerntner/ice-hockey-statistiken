@@ -134,6 +134,7 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px;paddin
     <p class="lead">Ich schreibe selbst keine einzige Zeile Code. Stattdessen beschreibe ich in einem ausführlichen Prompt, was die Seite können soll – Datenquellen, Rechenregeln, Punktevergabe, Prüfsummen, Layout. Die KI setzt das um, ich prüfe die Ergebnisse gegen die Excel-Datei. Genau darin liegt der Reiz: Aus Fachwissen und einer präzisen Beschreibung entsteht ein funktionierendes Werkzeug. Und wo die KI danebenliegt, steht das hier offen.</p>
     <h3>Änderungen zur Vorversion</h3>
     <ul class="clog">
+      <li><b>24. September 2026 (2. Update):</b> TIE-Regel strikt nach Vorgabe: Als Unentschieden gelten Spiele mit gleichem Ergebnis sowie Spiele des Grunddurchgangs vor 1999/2000 mit Kennzeichen TIE. Acht ältere Spiele, die in der Verlängerung entschieden wurden (sieben Kärntner Derbys, ein Playoff-Halbfinale 1999), zählen nun als Sieg bzw. Niederlage nach OT statt als Unentschieden. Meister-Banner auch für Saisonen mit Best-of-5-Finale (BL 02/03, EBEL 03/04); Saisonen ohne ermittelbaren Meister sind gekennzeichnet. Tabelle als CSV-Datei für Excel herunterladbar.</li>
       <li><b>24. September 2026:</b> Datenstand auf 23.09.2026 aktualisiert: sechs weitere Spiele der Saison ICE 26/27 ergänzt (19 Spiele im Grunddurchgang).</li>
       <li><b>22. September 2026:</b> Saison ICE 26/27 ergänzt (Milano HC – Bears neu in der Liga). Fehler EBEL 17/18 behoben: 60 Spiele der Pick-Round/Qualifikation waren zusätzlich als Grunddurchgang erfasst und wurden aus der GD-Tabelle entfernt. Kürzel HCN (ICE 24/25, Viertelfinale) zu HCB korrigiert. Serienwahrscheinlichkeiten im Binomialbaum berücksichtigen jetzt Heim- und Auswärtsspiele getrennt.</li>
       <li><b>01. März 2026:</b> Zuweisung der richtigen Kürzel zu den passenden Teams.</li>
@@ -155,6 +156,7 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px;paddin
     <h2>Tabelle Grunddurchgang</h2>
     <div class="controls">
       <label>Saison<select id="selSeason"></select></label>
+      <button class="btn" id="csvBtn" type="button">Als CSV (Excel) herunterladen</button>
     </div>
     <div id="champ"></div>
     <div class="tblwrap"><table id="tblStandings"></table></div>
@@ -291,7 +293,9 @@ const CUR = SEASONS.length - 1;
 function res(g, team){
   const my = g.h === team ? g.gh : g.ga, op = g.h === team ? g.ga : g.gh;
   if (my === op) return 'T';
-  if (g.ot && g.s < IDX_OT) return 'T';
+  // Overtime im Grunddurchgang erst ab 1999/2000: GD-Spiele davor mit Kennzeichen TIE = Unentschieden.
+  // Playoff- und Derbyspiele mit Sieger nach Verlängerung zählen als OT-Sieg/-Niederlage.
+  if (g.ot && g.s < IDX_OT && g.r === 'GD') return 'T';
   if (g.ot) return my > op ? 'OTW' : 'OTL';
   return my > op ? 'W' : 'L';
 }
@@ -361,19 +365,30 @@ function standings(s){
   return Object.values(T).map(r => (r.GD = r.GF - r.GA, r))
     .sort((x,y) => y.PTS - x.PTS || y.GD - x.GD || y.GF - x.GF || x.c.localeCompare(y.c));
 }
+function seriesWins(list){
+  const w = {};
+  list.forEach(g => { if (g.gh > g.ga) w[g.h] = (w[g.h]||0)+1; else if (g.ga > g.gh) w[g.a] = (w[g.a]||0)+1; });
+  return Object.entries(w).sort((x,y) => y[1]-x[1]);
+}
 function champion(s){
-  let f = GAMES.filter(g => g.s === s && g.r === 'PO' && g.det === 'F');
-  if (!f.length){
-    const po = GAMES.filter(g => g.s === s && g.r === 'PO');
-    if (!po.length) return null;
+  const po = GAMES.filter(g => g.s === s && g.r === 'PO');
+  if (!po.length) return null;
+  let f;
+  if (po.some(g => g.det)) f = po.filter(g => g.det === 'F');   // Runden-Detail vorhanden: nur echte Finalspiele
+  else {                                                          // ohne Runden-Detail: letzte Paarung = Finale
     const l = po[po.length-1];
     f = po.filter(g => (g.h===l.h && g.a===l.a) || (g.h===l.a && g.a===l.h));
   }
-  const w = {};
-  f.forEach(g => { if (g.gh > g.ga) w[g.h] = (w[g.h]||0)+1; else if (g.ga > g.gh) w[g.a] = (w[g.a]||0)+1; });
-  const top = Object.entries(w).sort((x,y) => y[1]-x[1])[0];
-  return top && top[1] >= 4 ? top[0] : null;
+  if (!f.length) return null;
+  // Serienlänge der Saison aus den Daten: erreicht irgendein Team 4 Siege in einer Serie → Best-of-7, sonst Best-of-5
+  const ser = {};
+  po.forEach(g => { const k = g.det + '|' + [g.h, g.a].sort().join('-'); (ser[k] = ser[k] || []).push(g); });
+  const maxW = Math.max(...Object.values(ser).map(l => (seriesWins(l)[0] || [0,0])[1]));
+  const need = maxW >= 4 ? 4 : 3;
+  const w = seriesWins(f);
+  return w.length && w[0][1] >= need && (!w[1] || w[0][1] > w[1][1]) ? w[0][0] : null;
 }
+const NO_CHAMP = {'ICE 19/20': 'Kein Meister: Die Playoffs wurden im März 2020 während des Viertelfinales wegen der COVID-19-Pandemie abgebrochen.'};
 const selSeason = document.getElementById('selSeason');
 selSeason.innerHTML = SEASONS.map((s,i) => ({s,i})).filter(o => o.i > 0).reverse()
   .map(o => `<option value="${o.i}">${o.s}${o.i===CUR?' (aktuell)':''}</option>`).join('');
@@ -384,7 +399,8 @@ function renderTable(){
   const ch = champion(s);
   document.getElementById('champ').innerHTML = ch
     ? `<div class="banner"><span class="cup">🏆</span><div><span class="muted small">Meister ${esc(SEASONS[s])}</span><br><b>${esc(tn(ch))}</b></div></div>`
-    : (s === CUR ? `<div class="note">Die Saison ${esc(SEASONS[s])} läuft. Stand nach ${gdGames(s).length} Spielen des Grunddurchgangs.</div>` : '');
+    : (s === CUR ? `<div class="note">Die Saison ${esc(SEASONS[s])} läuft. Stand nach ${gdGames(s).length} Spielen des Grunddurchgangs.</div>`
+      : `<div class="note">${esc(NO_CHAMP[SEASONS[s]] || 'Kein Meister-Banner: Die Finalserie dieser Saison ist in der Datenbasis nicht vollständig erfasst.')}</div>`);
   let h = `<thead><tr><th>#</th><th class="l">Kürzel</th><th class="l">Team</th><th>GP</th><th>W</th><th>L</th><th>OTW</th><th>OTL</th>${ties?'<th>U</th>':''}<th>GF</th><th>GA</th><th>GD</th><th>PTS</th></tr></thead><tbody>`;
   st.forEach((r,i) => {
     h += `<tr><td>${i+1}</td><td class="l">${badge(r.c)}</td><td class="l">${esc(tn(r.c))}</td><td class="num">${r.GP}</td><td class="num">${r.W}</td><td class="num">${r.L}</td><td class="num">${r.OTW}</td><td class="num">${r.OTL}</td>${ties?`<td class="num">${r.T}</td>`:''}<td class="num">${r.GF}</td><td class="num">${r.GA}</td><td class="num ${r.GD>0?'pos':r.GD<0?'neg':''}">${r.GD>0?'+':''}${r.GD}</td><td class="num"><b>${r.PTS}</b></td></tr>`;
@@ -393,6 +409,21 @@ function renderTable(){
   const sys = s >= IDX_3P ? 'Sieg 3 · OT-Sieg 2 · OT-Niederlage 1 · Niederlage 0' : 'Sieg 2 · OT-Sieg 2 · OT-Niederlage 1 · Niederlage 0';
   document.getElementById('tblNote').innerHTML = `Nur Grunddurchgang (GD). Punktevergabe: ${sys}. Sortierung: Punkte, dann Tordifferenz, dann erzielte Tore.` + (ties ? ' U = Unentschieden (vor Einführung der Overtime 1999/2000), 1 Punkt je Team.' : '');
 }
+
+// CSV-Export (Excel, deutsches Gebietsschema: Semikolon, UTF-8 mit BOM)
+document.getElementById('csvBtn').addEventListener('click', () => {
+  const s = +selSeason.value, st = standings(s), ties = st.some(r => r.T > 0);
+  const cols = ['Kürzel','Team','GP','W','L','OTW','OTL', ...(ties ? ['U'] : []), 'GF','GA','GD','PTS'];
+  const q = v => /[;"\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+  const lines = [cols.join(';')].concat(st.map(r =>
+    [r.c, tn(r.c), r.GP, r.W, r.L, r.OTW, r.OTL, ...(ties ? [r.T] : []), r.GF, r.GA, r.GD, r.PTS].map(q).join(';')));
+  const blob = new Blob(['\ufeff' + lines.join('\r\n') + '\r\n'], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Tabelle_' + SEASONS[s].replace(/[^A-Za-z0-9]+/g, '_') + '_GD.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
 
 // ---------- Historische Spiele ----------
 let gLimit = 100;
@@ -468,7 +499,7 @@ function renderH2H(){
     h += `<tr><td class="l num">${fmtDate(g.d)}</td><td class="l">${esc(SEASONS[g.s])}</td><td class="l">${g.r}${g.det?' '+g.det:''}</td><td class="l">${badge(g.h)}</td><td class="num"><b>${g.gh}:${g.ga}</b>${g.ot?' <span class="muted small">OT</span>':''}</td><td class="l">${badge(g.a)}</td><td class="l ${r==='W'||r==='OTW'?'pos':r==='T'?'':'neg'}">${lab[r]}</td></tr>`;
   });
   h += '</tbody></table></div>';
-  h += `<p class="small muted">Test = Gew. reg. + Gew. OT + TIE + Loss OT + Loss reg.; muss „Spiele absolut“ entsprechen. TIE = Unentschieden (gleiches Ergebnis oder Spiele mit Kennzeichen TIE vor Einführung der Overtime im Grunddurchgang 1999/2000).</p>`;
+  h += `<p class="small muted">Test = Gew. reg. + Gew. OT + TIE + Loss OT + Loss reg.; muss „Spiele absolut“ entsprechen. TIE = Unentschieden (gleiches Ergebnis oder Spiele des Grunddurchgangs vor Einführung der Overtime 1999/2000 mit Kennzeichen TIE). Playoff- und Derbyspiele, die vor 1999/2000 in der Verlängerung entschieden wurden, zählen als Gew. OT bzw. Loss OT.</p>`;
   out.innerHTML = h;
 }
 
@@ -627,10 +658,10 @@ const qA = document.getElementById('qA'), qB = document.getElementById('qB');
 linkPair(qA, qB, renderPoisson, '– Team wählen –', 'KAC', 'VSV');
 const fact = n => n <= 1 ? 1 : n * fact(n - 1);
 const pois = (k, l) => Math.exp(-l) * Math.pow(l, k) / fact(k);
-// Ergebnis nach 60 Minuten: Siegtor in OT/Penalty herausrechnen (ab 1999/2000)
+// Ergebnis nach 60 Minuten: Siegtor in OT/Penalty herausrechnen (alle Spiele mit Kennzeichen TIE)
 function reg60(g){
   let h = g.gh, a = g.ga;
-  if (g.ot && g.s >= IDX_OT && h !== a){ if (h > a) h--; else a--; }
+  if (g.ot && h !== a){ if (h > a) h--; else a--; }
   return [h, a];
 }
 function renderPoisson(){
