@@ -54,6 +54,17 @@ table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 th{background:var(--bg2);color:var(--gold);font-weight:600;position:sticky;top:0}
 td.l,th.l{text-align:left}
+td.c,th.c{text-align:center}
+.otmark{color:var(--gold2);font-weight:600}
+input.num{background:var(--bg2);color:var(--text);border:1px solid var(--line2);border-radius:6px;padding:8px 12px;font:14px 'IBM Plex Mono',ui-monospace,monospace;width:120px}
+input.num:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+input.num[aria-invalid="true"]{border-color:#e0666e}
+.err{color:#e0666e;font-size:13px;margin:-8px 0 14px}
+.step{display:grid;grid-template-columns:34px 1fr;gap:4px 12px;margin:16px 0;max-width:80ch}
+.step .ico{font-size:22px;line-height:1.3;grid-row:span 2}
+.step h3{margin:0;font-size:17px}
+.step p{margin:0}
+.mcres td b{color:var(--gold2)}
 tbody tr:nth-child(even){background:rgba(255,255,255,.018)}
 tbody tr:hover{background:rgba(201,168,76,.07)}
 td.num{font-family:'IBM Plex Mono',ui-monospace,monospace}
@@ -134,6 +145,7 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px;paddin
     <p class="lead">Ich schreibe selbst keine einzige Zeile Code. Stattdessen beschreibe ich in einem ausführlichen Prompt, was die Seite können soll – Datenquellen, Rechenregeln, Punktevergabe, Prüfsummen, Layout. Die KI setzt das um, ich prüfe die Ergebnisse gegen die Excel-Datei. Genau darin liegt der Reiz: Aus Fachwissen und einer präzisen Beschreibung entsteht ein funktionierendes Werkzeug. Und wo die KI danebenliegt, steht das hier offen.</p>
     <h3>Änderungen zur Vorversion</h3>
     <ul class="clog">
+      <li><b>25. September 2026:</b> Historische Spiele um die Spalte „in Verlängerung“ ergänzt. Poisson-Verteilung um eine Monte-Carlo-Simulation erweitert: Durchläufe wählbar (10.000, 100.000, 1.000.000), λ wahlweise aus den Daten der gewählten Teams oder als eigenes Szenario, dazu eine Schritt-für-Schritt-Erklärung. Zur Kontrolle wird jedes simulierte Ergebnis dem exakt berechneten Poisson-Wert gegenübergestellt. Datenbasis unverändert (Stand 23.09.2026).</li>
       <li><b>24. September 2026 (3. Update):</b> Bekanntes Problem ergänzt: Claude „erfindet“ noch URLs. Als erster Schritt zur Behebung wurden alle Links der Seite mit den im Prompt vorgegebenen Adressen abgeglichen.</li>
       <li><b>24. September 2026 (2. Update):</b> TIE-Regel strikt nach Vorgabe: Als Unentschieden gelten Spiele mit gleichem Ergebnis sowie Spiele des Grunddurchgangs vor 1999/2000 mit Kennzeichen TIE. Acht ältere Spiele, die in der Verlängerung entschieden wurden (sieben Kärntner Derbys, ein Playoff-Halbfinale 1999), zählen nun als Sieg bzw. Niederlage nach OT statt als Unentschieden. Meister-Banner auch für Saisonen mit Best-of-5-Finale (BL 02/03, EBEL 03/04); Saisonen ohne ermittelbaren Meister sind gekennzeichnet. Tabelle als CSV-Datei für Excel herunterladbar.</li>
       <li><b>24. September 2026:</b> Datenstand auf 23.09.2026 aktualisiert: sechs weitere Spiele der Saison ICE 26/27 ergänzt (19 Spiele im Grunddurchgang).</li>
@@ -178,6 +190,7 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px;paddin
     </div>
     <p class="small muted" id="gCount"></p>
     <div class="tblwrap"><table id="tblGames"></table></div>
+    <p class="small muted">In Verlängerung: „ja“ = Entscheidung in der Verlängerung oder im Penaltyschießen (Kennzeichen TIE). „Unentschieden“ = gleiches Ergebnis oder Spiel des Grunddurchgangs vor Einführung der Overtime 1999/2000 mit Kennzeichen TIE.</p>
     <p style="text-align:center;margin-top:14px"><button class="btn" id="gMore">Weitere 100 Spiele laden</button></p>
   </div>
 </section>
@@ -234,6 +247,26 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px;paddin
         <label>Gastmannschaft<select id="qB"></select></label>
       </div>
       <div id="poiOut"></div>
+    </div>
+    <div class="card">
+      <h2>Monte-Carlo-Simulation</h2>
+      <p class="lead">Statt die Wahrscheinlichkeiten nur auszurechnen, spielt der Browser die Partie tausendfach mit dem Zufallsgenerator durch und zählt aus, wie oft welches Ergebnis herauskommt.</p>
+      <div class="controls">
+        <label>Tor-Durchschnitt (λ)<select id="mSrc" style="max-width:100%">
+          <option value="data">aus den Daten (Teams oben)</option>
+          <option value="own">eigenes Szenario</option>
+        </select></label>
+        <label id="mOwnA" style="display:none">λ Team A (Heim)<input class="num" id="mLA" type="text" inputmode="decimal" value="1,6"></label>
+        <label id="mOwnB" style="display:none">λ Team B (Gast)<input class="num" id="mLB" type="text" inputmode="decimal" value="1,1"></label>
+        <label>Durchläufe<select id="mRuns">
+          <option value="10000" selected>10.000</option>
+          <option value="100000">100.000</option>
+          <option value="1000000">1.000.000</option>
+        </select></label>
+        <button class="btn" id="mRun" type="button">Simulation neu starten</button>
+      </div>
+      <div id="mErr" class="err" role="alert"></div>
+      <div id="mcOut" aria-live="polite"></div>
     </div>
   </div>
 </section>
@@ -438,9 +471,12 @@ function renderGames(){
   let list = GAMES.filter(g => (!A || g.h===A || g.a===A) && (!B || g.h===B || g.a===B));
   if (gSort.value === 'desc') list = list.slice().reverse();
   document.getElementById('gCount').textContent = `${list.length.toLocaleString('de-AT')} Spiele gefunden – angezeigt: ${Math.min(gLimit, list.length).toLocaleString('de-AT')}`;
-  let h = '<thead><tr><th class="l">Datum</th><th class="l">Heimmannschaft</th><th>Tore Heim</th><th>Tore Gast</th><th class="l">Gastmannschaft</th></tr></thead><tbody>';
+  let h = '<thead><tr><th class="l">Datum</th><th class="l">Heimmannschaft</th><th>Tore Heim</th><th>Tore Gast</th><th class="l">Gastmannschaft</th><th class="c">in Verlängerung</th></tr></thead><tbody>';
   list.slice(0, gLimit).forEach(g => {
-    h += `<tr><td class="l num">${fmtDate(g.d)}</td><td class="l">${badge(g.h)} ${esc(tn(g.h))}</td><td class="num"><b>${g.gh}</b></td><td class="num"><b>${g.ga}</b></td><td class="l">${badge(g.a)} ${esc(tn(g.a))}</td></tr>`;
+    // gleiche Wertung wie Tabelle und H2H: res() aus Sicht der Heimmannschaft
+    const r = res(g, g.h);
+    const ov = r === 'T' ? '<span class="muted">Unentschieden</span>' : (g.ot ? '<span class="otmark">ja</span>' : '<span class="muted">–</span>');
+    h += `<tr><td class="l num">${fmtDate(g.d)}</td><td class="l">${badge(g.h)} ${esc(tn(g.h))}</td><td class="num"><b>${g.gh}</b></td><td class="num"><b>${g.ga}</b></td><td class="l">${badge(g.a)} ${esc(tn(g.a))}</td><td class="c">${ov}</td></tr>`;
   });
   document.getElementById('tblGames').innerHTML = h + '</tbody>';
   document.getElementById('gMore').style.display = list.length > gLimit ? '' : 'none';
@@ -668,7 +704,7 @@ function reg60(g){
 }
 function renderPoisson(){
   const H = qA.value, G = qB.value, out = document.getElementById('poiOut');
-  if (!H || !G){ out.innerHTML = '<p class="muted">Bitte Heim- und Gastmannschaft wählen.</p>'; return; }
+  if (!H || !G){ out.innerHTML = '<p class="muted">Bitte Heim- und Gastmannschaft wählen.</p>'; POI = null; renderMC(); return; }
   let list = GAMES.filter(g => g.h === H && g.a === G), basis = `${list.length} Heimspiele von ${esc(H)} gegen ${esc(G)}`;
   let lH, lG;
   if (list.length >= 3){
@@ -680,6 +716,7 @@ function renderPoisson(){
     lG = aa.reduce((s,g) => s + reg60(g)[1], 0) / Math.max(1, aa.length);
     basis = `zu wenige direkte Duelle (${list.length}); ersatzweise alle Heimspiele von ${esc(H)} (${hh.length}) und alle Auswärtsspiele von ${esc(G)} (${aa.length})`;
   }
+  POI = {H, G, lH, lG, direct: list.length >= 3, n: list.length};
   const MAX = 25;
   const ph = [...Array(MAX+1)].map((_,k) => pois(k, lH)), pg = [...Array(MAX+1)].map((_,k) => pois(k, lG));
   let win = 0, draw = 0, loss = 0;
@@ -705,6 +742,137 @@ function renderPoisson(){
   }
   h += '</tbody></table></div><p class="small muted">Werte in Prozent. Grün: Heimsieg, Gold: Unentschieden nach 60 Minuten, Rot: Auswärtssieg. „·“ = unter 0,05 %.</p>';
   out.innerHTML = h;
+  renderMC();
+}
+
+// ---------- Monte-Carlo-Simulation ----------
+let POI = null;                       // λ der gewählten Heim-/Gastmannschaft (aus renderPoisson)
+const MC_MAX = 30;                    // Tore je Team, bis zu denen die Poisson-Kurve berechnet wird
+const fmtInt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const fmtL = x => x.toFixed(2).replace('.', ',');
+const pp = x => (x*100).toFixed(2).replace('.', ',');
+const mSrc = document.getElementById('mSrc'), mLA = document.getElementById('mLA'), mLB = document.getElementById('mLB');
+const mRuns = document.getElementById('mRuns'), mRunBtn = document.getElementById('mRun');
+mSrc.addEventListener('change', () => {
+  const own = mSrc.value === 'own';
+  document.getElementById('mOwnA').style.display = own ? '' : 'none';
+  document.getElementById('mOwnB').style.display = own ? '' : 'none';
+  renderMC();
+});
+[mLA, mLB].forEach(el => el.addEventListener('change', renderMC));
+mRuns.addEventListener('change', renderMC);
+mRunBtn.addEventListener('click', renderMC);
+
+function parseLambda(v){ const t = String(v).trim().replace(',', '.'); return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN; }
+function mcSetup(){
+  if (mSrc.value === 'data'){
+    if (!POI) return {err: 'Bitte oben Heim- und Gastmannschaft wählen oder „eigenes Szenario“ einstellen.'};
+    return {lA: POI.lH, lB: POI.lG, A: POI.H, B: POI.G, own: false, direct: POI.direct, n: POI.n};
+  }
+  const lA = parseLambda(mLA.value), lB = parseLambda(mLB.value);
+  const okA = lA >= 0.1 && lA <= 10, okB = lB >= 0.1 && lB <= 10;
+  mLA.setAttribute('aria-invalid', okA ? 'false' : 'true');
+  mLB.setAttribute('aria-invalid', okB ? 'false' : 'true');
+  if (!okA || !okB) return {err: 'λ muss eine Zahl zwischen 0,1 und 10 sein, zum Beispiel 1,6.'};
+  return {lA, lB, A: 'Team A', B: 'Team B', own: true};
+}
+// Poisson-Kurve als kumulierte Verteilung: Grundlage für den „digitalen Würfel“
+function mcCdf(l){
+  const c = []; let s = 0;
+  for (let k = 0; k <= MC_MAX; k++){ s += pois(k, l); c.push(s); }
+  c[MC_MAX] = 1;
+  return c;
+}
+function mcDraw(c){ const u = Math.random(); let k = 0; while (k < MC_MAX && u >= c[k]) k++; return k; }
+function mcSimulate(lA, lB, N){
+  const cA = mcCdf(lA), cB = mcCdf(lB), D = MC_MAX + 2;
+  const cnt = new Uint32Array(D * D);
+  let wA = 0, wB = 0, ot = 0, over = 0, ex = null;
+  const t0 = performance.now();
+  for (let i = 0; i < N; i++){
+    let a = mcDraw(cA), b = mcDraw(cB);
+    const a60 = a, b60 = b;
+    if (a === b){ ot++; if (Math.random() < 0.5) a++; else b++; }   // Verlängerung/Penalty: 50:50, Sieger +1 Tor
+    if (a > b) wA++; else wB++;
+    if (a + b > 2.5) over++;
+    cnt[a * D + b]++;
+    if (i === 0) ex = {a60, b60, a, b};
+  }
+  let best = 0;
+  for (let k = 1; k < cnt.length; k++) if (cnt[k] > cnt[best]) best = k;
+  return {N, wA, wB, ot, over, ex, cnt, D, bA: Math.floor(best / D), bB: best % D, ms: performance.now() - t0};
+}
+// Exakte Vergleichswerte mit derselben Regel (Remis nach 60 Min. → 50:50, Sieger +1 Tor)
+function mcExact(lA, lB){
+  const pA = [...Array(MC_MAX+1)].map((_,k) => pois(k, lA)), pB = [...Array(MC_MAX+1)].map((_,k) => pois(k, lB));
+  const D = MC_MAX + 2, fin = new Float64Array(D * D);
+  let wA = 0, wB = 0, ot = 0, over = 0;
+  for (let i = 0; i <= MC_MAX; i++) for (let j = 0; j <= MC_MAX; j++){
+    const p = pA[i] * pB[j];
+    if (i > j){ wA += p; fin[i*D+j] += p; if (i + j > 2.5) over += p; }
+    else if (i < j){ wB += p; fin[i*D+j] += p; if (i + j > 2.5) over += p; }
+    else { ot += p; wA += p/2; wB += p/2; fin[(i+1)*D+j] += p/2; fin[i*D+j+1] += p/2; if (2*i + 1 > 2.5) over += p; }
+  }
+  let best = 0;
+  for (let k = 1; k < fin.length; k++) if (fin[k] > fin[best]) best = k;
+  return {wA, wB, ot, over, fin, D, pA, pB, bA: Math.floor(best / D), bB: best % D};
+}
+let mcToken = 0;                     // verhindert, dass eine überholte Simulation das neue Ergebnis überschreibt
+function renderMC(){
+  const out = document.getElementById('mcOut'), err = document.getElementById('mErr');
+  const cfg = mcSetup(), tok = ++mcToken;
+  if (cfg.err){ err.textContent = cfg.err; out.innerHTML = ''; mRunBtn.disabled = false; return; }
+  err.textContent = '';
+  const N = +mRuns.value;
+  out.innerHTML = `<p class="muted">Simulation läuft – ${fmtInt(N)} Durchläufe …</p>`;
+  mRunBtn.disabled = true;
+  setTimeout(() => {
+    if (tok !== mcToken) return;
+    const sim = mcSimulate(cfg.lA, cfg.lB, N), ex = mcExact(cfg.lA, cfg.lB);
+    out.innerHTML = mcHTML(cfg, sim, ex);
+    mRunBtn.disabled = false;
+  }, 20);
+}
+function mcHTML(cfg, sim, ex){
+  const A = cfg.A, B = cfg.B, N = sim.N;
+  const nA = cfg.own ? 'Team A (Heim)' : `${A} (${tn(A)})`, nB = cfg.own ? 'Team B (Gast)' : `${B} (${tn(B)})`;
+  const f = x => x / N;
+  const pBest = f(sim.cnt[sim.bA * sim.D + sim.bB]), eBest = ex.fin[sim.bA * ex.D + sim.bB];
+  // Test: Abweichung Simulation – exakt innerhalb von 4 Standardfehlern
+  const row = (lab, s, e) => {
+    const se = Math.sqrt(Math.max(e * (1 - e), 1e-12) / N), d = s - e, ok = Math.abs(d) <= 4 * se;
+    return `<tr><td class="l">${lab}</td><td class="num"><b>${pct(s)}</b></td><td class="num">${pct(e)}</td><td class="num">${Math.abs(d) < 5e-5 ? '±' : d > 0 ? '+' : '−'}${pp(Math.abs(d))} PP</td><td class="num ${ok?'ok':'bad'}">${ok?'✓':'✗'}</td></tr>`;
+  };
+  let h = `<h3>Ergebnis aus ${fmtInt(N)} Durchläufen</h3>`;
+  h += `<div class="kpis"><div class="kpi"><div class="v">${pct(f(sim.wA))}</div><div class="t">Sieg ${esc(nA)}</div></div>`;
+  h += `<div class="kpi"><div class="v">${pct(f(sim.wB))}</div><div class="t">Sieg ${esc(nB)}</div></div>`;
+  h += `<div class="kpi"><div class="v">${sim.bA}:${sim.bB}</div><div class="t">wahrscheinlichstes Endergebnis (${pct(pBest)})</div></div>`;
+  h += `<div class="kpi"><div class="v">${pct(f(sim.over))}</div><div class="t">Über 2,5 Tore</div></div></div>`;
+  h += `<p class="small muted">Ein Unentschieden gibt es im Eishockey nicht: Steht es nach 60 Minuten gleich, fällt die Entscheidung in der Verlängerung oder im Penaltyschießen. Das passierte in ${pct(f(sim.ot))} der simulierten Spiele. Alle Werte beziehen sich auf das Endergebnis inklusive Siegtor in der Verlängerung.</p>`;
+  h += `<div class="tblwrap mcres" style="margin:12px 0"><table><thead><tr><th class="l">Kontrolle</th><th>Simulation</th><th>exakt (Poisson-Formel)</th><th>Abweichung</th><th>Test</th></tr></thead><tbody>`;
+  h += row(`Sieg ${esc(A)}`, f(sim.wA), ex.wA);
+  h += row(`Sieg ${esc(B)}`, f(sim.wB), ex.wB);
+  h += row('davon Entscheidung in der Verlängerung', f(sim.ot), ex.ot);
+  h += row(`Endergebnis ${sim.bA}:${sim.bB}`, pBest, eBest);
+  h += row('Über 2,5 Tore', f(sim.over), ex.over);
+  h += `</tbody></table></div>`;
+  h += `<p class="small muted">Test ✓ = Simulation und exakte Rechnung liegen innerhalb der zufallsbedingten Schwankung (4 Standardfehler).${(ex.bA !== sim.bA || ex.bB !== sim.bB) ? ` Exakt gerechnet ist ${ex.bA}:${ex.bB} knapp das wahrscheinlichste Endergebnis (${pct(ex.fin[ex.bA*ex.D+ex.bB])}) – mehr Durchläufe gleichen solche Unterschiede aus.` : ''}</p>`;
+
+  // Schritt-für-Schritt-Erklärung
+  const curve = (arr) => [0,1,2,3,4,5].map(k => `<td class="num">${pct(arr[k])}</td>`).join('') + `<td class="num">${pct(1 - arr.slice(0,6).reduce((s,x) => s+x, 0))}</td>`;
+  const tol = 2 * Math.sqrt(0.25 / N) * 100;
+  const e = sim.ex;
+  const step1 = cfg.own
+    ? `Du hast das Szenario selbst vorgegeben: Team A schießt im Schnitt <b>${fmtL(cfg.lA)} Tore</b>, Team B <b>${fmtL(cfg.lB)} Tore</b> pro Spiel. Dieser Durchschnitt heißt <b>Lambda (λ)</b> – und mehr braucht das Modell nicht.`
+    : `Zuerst schaut das Modell in die Geschichte: ${esc(A)} hat ${cfg.direct ? `in ${cfg.n} Heimspielen gegen ${esc(B)}` : `in allen Heimspielen (zu wenige direkte Duelle gegen ${esc(B)})`} im Schnitt <b>${fmtL(cfg.lA)} Tore</b> nach 60 Minuten erzielt, ${esc(B)} ${cfg.direct ? 'in diesen Spielen' : 'in allen Auswärtsspielen'} <b>${fmtL(cfg.lB)} Tore</b>. Dieser Durchschnitt heißt <b>Lambda (λ)</b> – und mehr braucht das Modell nicht.`;
+  h += `<h3>Schritt für Schritt erklärt</h3>`;
+  h += `<div class="step"><div class="ico" aria-hidden="true">🏒</div><h3>Schritt 1: Den Tor-Durchschnitt (Lambda) festlegen</h3><p>${step1}</p></div>`;
+  h += `<div class="step"><div class="ico" aria-hidden="true">📈</div><h3>Schritt 2: Die Poisson-Wahrscheinlichkeitskurve berechnen</h3><p>Aus λ rechnet die <b>Poisson-Verteilung</b> für jedes Team aus, wie wahrscheinlich 0, 1, 2, 3 oder mehr Tore in einem einzigen Spiel sind. Im Fußball liegt λ meist bei 1 bis 2 Toren, da sind 0 oder 1 Tor am häufigsten. Eishockey hat eine höhere Schlagzahl: Die Kurve rutscht nach rechts, 2, 3 oder 4 Tore sind ganz normal.</p></div>`;
+  h += `<div class="tblwrap" style="margin:0 0 6px"><table><thead><tr><th class="l">Tore im Spiel</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6+</th></tr></thead><tbody><tr><td class="l">${esc(A)} (λ = ${fmtL(cfg.lA)})</td>${curve(ex.pA)}</tr><tr><td class="l">${esc(B)} (λ = ${fmtL(cfg.lB)})</td>${curve(ex.pB)}</tr></tbody></table></div>`;
+  h += `<div class="step"><div class="ico" aria-hidden="true">🎲</div><h3>Schritt 3: Das Spiel „würfeln“</h3><p>Jetzt kommt die <b>Monte-Carlo-Simulation</b> ins Spiel: Ein Zufallsgenerator – ein digitaler Würfel – zieht für jedes Team eine Zahl zwischen 0 und 1. Wo diese Zahl auf der Poisson-Kurve landet, so viele Tore schießt das Team. Im allerersten Durchlauf stand es nach 60 Minuten <b>${e.a60}:${e.b60}</b>${e.a60 === e.b60 ? `, also ging es in die Verlängerung – dort entscheidet ein zweiter Wurf mit 50:50, der Sieger bekommt ein Tor dazu. Endergebnis: <b>${e.a}:${e.b}</b>` : ''}.</p></div>`;
+  h += `<div class="step"><div class="ico" aria-hidden="true">🔄</div><h3>Schritt 4: ${fmtInt(N)} Mal in Lichtgeschwindigkeit wiederholen</h3><p>Ein einzelnes Spiel ist reiner Zufall. Deshalb hat dein Browser die Partie <b>${fmtInt(N)} Mal</b> hintereinander durchgespielt – in ${sim.ms < 1000 ? fmtInt(Math.max(1, Math.round(sim.ms))) + ' Millisekunden' : (sim.ms/1000).toFixed(1).replace('.', ',') + ' Sekunden'}. So entsteht ein riesiger Stapel hypothetischer Ergebnisse. Je mehr Durchläufe, desto ruhiger die Zahlen: Bei ${fmtInt(N)} Durchläufen schwanken die Prozentwerte typischerweise um etwa ±${tol.toFixed(1).replace('.', ',')} Prozentpunkte.</p></div>`;
+  h += `<div class="step"><div class="ico" aria-hidden="true">📊</div><h3>Schritt 5: Die Datenbank auswerten</h3><p>Zum Schluss wird ausgezählt: In <b>${fmtInt(sim.wA)} von ${fmtInt(N)}</b> Spielen hat ${esc(A)} gewonnen – das sind ${pct(f(sim.wA))}. Genauso werden die Siege von ${esc(B)}, das häufigste Endergebnis (${sim.bA}:${sim.bB}, ${fmtInt(sim.cnt[sim.bA*sim.D+sim.bB])} Mal) und alle Spiele mit mindestens 3 Toren gezählt (${fmtInt(sim.over)} Mal, „Über 2,5 Tore“). Weil sich dieselben Werte auch exakt ausrechnen lassen, steht die Kontrolle oben gleich daneben.</p></div>`;
+  return h;
 }
 
 // ---------- Links ----------
